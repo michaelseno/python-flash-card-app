@@ -20,7 +20,6 @@ generate_data()
 def correct_answer():
     data = next_card()
     data_dict.remove(data)
-    print(len(data_dict))
     if len(data_dict) == 0:
         messagebox.showinfo(title="Congratulations!!!", message="You've memorized all the items in the flash card.")
         generate_data()
