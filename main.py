@@ -1,28 +1,40 @@
 import random
 from tkinter import *
 import pandas as pd
+import os
 from tkinter import messagebox
 
 data_dict = []
+current_card = {}
+path = ""
 
 BACKGROUND_COLOR = "#B1DDC6"
 
 
+def update_card_list():
+    data_dict.remove(current_card)
+    df = pd.DataFrame(data_dict)
+    df.to_csv("data/words_to_learn.csv", index=False)
+
+
 def generate_data():
-    global data_dict
-    df = pd.read_csv("data/french_words.csv")
-    data_dict = df.to_dict(orient="records")
+    try:
+        global data_dict, path
+        if os.path.exists("data/words_to_learn.csv"):
+            path = "data/words_to_learn.csv"
+        else:
+            path = "data/french_words.csv"
 
-
-generate_data()
+        df = pd.read_csv(path)
+        data_dict = df.to_dict(orient="records")
+    except pd.errors.EmptyDataError:
+        os.remove(path="data/words_to_learn.csv")
+        generate_data()
 
 
 def correct_answer():
-    data = next_card()
-    data_dict.remove(data)
-    if len(data_dict) == 0:
-        messagebox.showinfo(title="Congratulations!!!", message="You've memorized all the items in the flash card.")
-        generate_data()
+    update_card_list()
+    next_card()
 
 
 def wrong_answer():
@@ -30,23 +42,34 @@ def wrong_answer():
 
 
 def next_card():
-    rand_data = random.choice(data_dict)
-    canvas.itemconfig(card_image, image=card_front_img)
-    canvas.itemconfig(language, text=list(rand_data.keys())[0], fill="black")
-    canvas.itemconfig(translated_text, text=rand_data[list(rand_data.keys())[0]], fill="black")
-    window.after(3000, flip_card, rand_data)
-    return rand_data
+    try:
+        global current_card, flip_timer
+        window.after_cancel(flip_timer)
+        current_card = random.choice(data_dict)
+        canvas.itemconfig(card_image, image=card_front_img)
+        canvas.itemconfig(language, text=list(current_card.keys())[0], fill="black")
+        canvas.itemconfig(translated_text, text=current_card[list(current_card.keys())[0]], fill="black")
+        print(current_card)
+        flip_timer = window.after(3000, func=flip_card)
+    except IndexError:
+        messagebox.showinfo(title="Congratulations!", message=f"You've Memorized all of the words in the list.")
+        os.remove(path="data/words_to_learn.csv")
+        generate_data()
 
 
-def flip_card(data):
+def flip_card():
     canvas.itemconfig(card_image, image=card_back_img)
-    canvas.itemconfig(language, text=list(data.keys())[1], fill="white")
-    canvas.itemconfig(translated_text, text=data[list(data.keys())[1]], fill="white")
+    canvas.itemconfig(language, text=list(current_card.keys())[1], fill="white")
+    canvas.itemconfig(translated_text, text=current_card[list(current_card.keys())[1]], fill="white")
 
 
 window = Tk()
 window.title("Flashy")
 window.config(pady=50, padx=50, bg=BACKGROUND_COLOR)
+
+generate_data()
+
+flip_timer = window.after(3000, func=flip_card)
 
 canvas = Canvas(width=800, height=526, highlightthickness=0, bg=BACKGROUND_COLOR)
 card_front_img = PhotoImage(file="./images/card_front.png")
